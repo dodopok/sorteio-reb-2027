@@ -1,4 +1,4 @@
-export const CONSENT_VERSION = '2026-10-03-v1'
+export const CONSENT_VERSION = '2026-10-03-v2'
 export const EVENT_DATE = '3 de outubro de 2026'
 export const SITE_URL = 'https://sorteio.redeepiscopalbrasileira.com.br'
 
@@ -18,9 +18,13 @@ export interface Winner {
   poolHash: string
 }
 export interface Dashboard {
+  generation: number
   status: RaffleStatus
   total: number
   eligible: number
   winners: Winner[]
   contacts: { drawId: string; name: string; email: string; whatsapp: string; prizeId: number }[]
+}
+export interface DrawResult extends Winner {
+  animationNames: string[]
 }

@@ -9,7 +9,7 @@ const suite = url ? describe : describe.skip
 suite('sorteio transacional em PostgreSQL real', () => {
   const sql = postgres(url!, { max: 20, onnotice: () => {} })
   beforeAll(async () => { await sql.unsafe(await readFile(new URL('../../database/001_schema.sql', import.meta.url), 'utf8')) })
-  beforeEach(async () => { await sql`TRUNCATE reb_draws, reb_participants, reb_sessions, reb_limits`; await sql`UPDATE reb_event SET status = 'open' WHERE id = 1` })
+  beforeEach(async () => { await sql`TRUNCATE reb_draws, reb_participants, reb_sessions, reb_limits`; await sql`UPDATE reb_event SET status = 'open', generation = 1 WHERE id = 1` })
   afterAll(async () => { await sql.end() })
   const register = (i: number, email = `pessoa${i}@example.com`, phone = `+55119${String(12340000 + i).padStart(8, '0')}`) => sql`SELECT reb_register('Pessoa Teste', ${email}, ${phone}, '2026-10-03-v1')`
   const draw = (id: string, prizeId: number) => sql`SELECT reb_draw(${id}, ${prizeId}, ${randomBytes(128)}) AS winner`
@@ -70,5 +70,41 @@ suite('sorteio transacional em PostgreSQL real', () => {
     expect(JSON.stringify(stage)).not.toContain('@example.com')
     expect(JSON.stringify(stage)).not.toContain('+5511')
     expect(stage.winners[0].name).toBe('Pessoa Teste')
+  })
+  it('apaga todos os testes de forma atômica, fecha inscrições e mantém a sessão e os limites', async () => {
+    await Promise.all([register(1), register(2), register(3)])
+    await sql`SELECT reb_set_status('closed')`
+    await draw(randomUUID(), 1)
+    await sql`INSERT INTO reb_sessions VALUES ('sessao-teste', now() + interval '1 hour')`
+    await sql`SELECT * FROM reb_rate_limit('limite-teste', 5, 60)`
+    const resets = await Promise.allSettled(Array.from({ length: 5 }, () => sql`SELECT reb_reset(1, 3, 1) AS generation`))
+    expect(resets.filter(result => result.status === 'fulfilled')).toHaveLength(1)
+    expect(resets.filter(result => result.status === 'rejected').every(result => result.reason.code === 'RE009')).toBe(true)
+    const dashboard = (await sql`SELECT reb_dashboard() AS data`)[0]!.data
+    expect(dashboard).toMatchObject({ generation: 2, status: 'draft', total: 0, eligible: 0, winners: [], contacts: [] })
+    expect((await sql`SELECT count(*)::integer AS n FROM reb_sessions`)[0]!.n).toBe(1)
+    expect((await sql`SELECT count(*)::integer AS n FROM reb_limits`)[0]!.n).toBe(1)
+    await sql`SELECT reb_set_status('open') FROM reb_assert_generation(2, true)`
+    await register(1)
+    expect((await sql`SELECT count(*)::integer AS n FROM reb_participants`)[0]!.n).toBe(1)
+  })
+  it('recusa uma confirmação desatualizada sem apagar participantes ou resultados', async () => {
+    await Promise.all([register(1), register(2), register(3)])
+    await expect(sql`SELECT reb_reset(1, 2, 0)`).rejects.toMatchObject({ code: 'RE010' })
+    await sql`SELECT reb_set_status('closed')`
+    await draw(randomUUID(), 1)
+    await expect(sql`SELECT reb_reset(1, 3, 0)`).rejects.toMatchObject({ code: 'RE010' })
+    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toMatchObject({ generation: 1, total: 3 })
+    expect((await sql`SELECT count(*)::integer AS n FROM reb_draws`)[0]!.n).toBe(1)
+  })
+  it('bloqueia operações de abas antigas e resets repetidos depois de zerar', async () => {
+    await Promise.all([register(1), register(2), register(3)])
+    await sql`SELECT reb_reset(1, 3, 0)`
+    await expect(sql`SELECT reb_reset(1, 0, 0)`).rejects.toMatchObject({ code: 'RE009' })
+    await expect(sql`SELECT reb_set_status('open') FROM reb_assert_generation(1, true)`).rejects.toMatchObject({ code: 'RE009' })
+    await sql`SELECT reb_set_status('open') FROM reb_assert_generation(2, true)`
+    await expect(sql`SELECT reb_register('Pessoa Antiga', 'antiga@example.com', '+5511987654321', '2026-10-03-v2') FROM reb_assert_generation(1, false)`).rejects.toMatchObject({ code: 'RE009' })
+    await expect(sql`SELECT reb_draw(${randomUUID()}, 1, ${randomBytes(128)}) FROM reb_assert_generation(1, true)`).rejects.toMatchObject({ code: 'RE009' })
+    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toMatchObject({ generation: 2, status: 'open', total: 0, winners: [] })
   })
 })

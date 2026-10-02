@@ -1,15 +1,16 @@
 import type { RaffleStatus } from '#shared/raffle'
 
 // Coalesce concurrent page loads and keep this public read cheap under bursts.
-let cached: { status: RaffleStatus; available: boolean } | undefined
+type PublicStatus = { status: RaffleStatus; available: boolean; generation: number }
+let cached: PublicStatus | undefined
 let cachedUntil = 0
-let pending: Promise<{ status: RaffleStatus; available: boolean }> | undefined
+let pending: Promise<PublicStatus> | undefined
 async function readStatus() {
   try {
-    const rows = await db()`SELECT status FROM reb_event WHERE id = 1`
-    return { status: (rows[0]?.status ?? 'draft') as RaffleStatus, available: true }
+    const rows = await db()`SELECT status, generation FROM reb_event WHERE id = 1`
+    return { status: (rows[0]?.status ?? 'draft') as RaffleStatus, available: true, generation: Number(rows[0]?.generation ?? 1) }
   } catch {
-    return { status: 'draft' as RaffleStatus, available: false }
+    return { status: 'draft' as RaffleStatus, available: false, generation: 0 }
   }
 }
 export default defineEventHandler(async () => {

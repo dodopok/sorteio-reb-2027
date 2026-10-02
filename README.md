@@ -140,10 +140,24 @@ Faça a preparação hoje e use o ensaio para verificar a apresentação sem gas
 1. Entre em `/admin/login` com seu e-mail e a senha que gerou.
 2. Abra `/ensaio`, faça as três rodadas, teste tela cheia e veja se o nome aparece bem na captura. Os nomes dessa página são fictícios e não acessam o banco.
 3. Use navegador com zoom de 100% e teste a captura na resolução da live. Há uma versão responsiva para acompanhar pelo celular.
-4. Confirme que nome, WhatsApp e e-mail não aparecem na aba compartilhada. **Compartilhe somente `/admin/palco`**, não o painel nem o navegador inteiro.
+4. Confira a roleta de primeiros nomes e a revelação do nome completo do ganhador. WhatsApp e e-mail não aparecem nessa tela. **Compartilhe somente `/admin/palco`**, não o painel nem o navegador inteiro.
 5. Teste o QR Code com outro celular. Os arquivos `public/live/qr-sorteio.svg` e `public/live/qr-sorteio.png` apontam para o domínio público definitivo.
 6. Confira o regulamento, a política de privacidade e o responsável pelo contato dos ganhadores.
 7. Confira backup do PostgreSQL e acesso à conta Railway. Evite atualizar código ou infraestrutura durante o sorteio.
+
+### Apagar os testes antes do sorteio oficial
+
+Se fez cadastros ou sorteios reais para testar a aplicação:
+
+1. Entre no painel `/admin` e vá até **Apagar os testes**, no final da página.
+2. Clique em **Apagar testes e zerar**. Confira a quantidade de inscrições e resultados indicada.
+3. Digite **APAGAR TESTES** e clique em **Apagar e zerar**.
+4. Confira **0 inscrições**, **0 livros sorteados** e **Ainda não abertas**. Feche as abas antigas do palco.
+5. Quando estiver pronto para a live, clique em **Abrir inscrições** e divulgue o link.
+
+Isso apaga todas as inscrições e resultados da base atual, inclusive contatos e registros dos sorteios. Não há como desfazer pelo painel. Use somente antes do sorteio oficial. Backups da hospedagem e CSVs já baixados não são apagados por essa ação.
+
+O acesso do admin e as proteções de limite de tentativas continuam ativos. O reset ocorre em uma transação; se entrar uma inscrição ou um resultado depois da confirmação ter sido aberta, a exclusão é recusada e o painel deve ser atualizado. Páginas antigas não conseguem cadastrar, abrir inscrições ou sortear na nova rodada até atualizar. A confirmação de cadastro de teste guardada no navegador também perde a validade, permitindo se inscrever novamente.
 
 ## Operação durante a live
 
@@ -152,7 +166,7 @@ Faça a preparação hoje e use o ensaio para verificar a apresentação sem gas
 3. Acompanhe o número de inscrições. O painel atualiza a cada 15 segundos; **Atualizar agora** força a leitura.
 4. Quando decidir encerrar, clique em **Encerrar inscrições** e confirme. O servidor bloqueia novos cadastros imediatamente; os formulários já abertos atualizam o status em até 30 segundos e recebem uma mensagem de encerramento se tentarem enviar antes disso.
 5. Clique em **Abrir tela do sorteio**. Compartilhe essa aba na live e use **Tela cheia**.
-6. Clique em **Sortear agora** e aguarde a apresentação do ganhador.
+6. Clique em **Sortear agora**. A roleta passa por primeiros nomes, desacelera e revela o ganhador em aproximadamente sete segundos. A animação é apenas visual; o resultado já está salvo. Com a preferência de movimento reduzido do dispositivo, o resultado aparece diretamente.
 7. Clique em **Próximo livro** para preparar a rodada seguinte. Repita até concluir os três livros.
 8. Encerre o compartilhamento de tela. Volte ao painel e clique em **Mostrar contatos**.
 9. Baixe o CSV dos **três ganhadores** e organize o contato e o envio com a Thomas Nelson. O endereço de entrega deve ser solicitado em contato privado.
@@ -177,7 +191,7 @@ Uma instância da aplicação e um PostgreSQL são suficientes como arquitetura 
 
 ## Privacidade, regras e fim do evento
 
-O aplicativo inclui `/regulamento` e `/privacidade`, com consentimento registrado na versão `2026-10-03-v1`, finalidades limitadas ao sorteio, anúncio do nome e compartilhamento dos dados necessários dos ganhadores para entrega. Não há consentimento para marketing nem lista de divulgação.
+O aplicativo inclui `/regulamento` e `/privacidade`, com consentimento registrado na versão `2026-10-03-v2`, finalidades limitadas ao sorteio, exibição do primeiro nome na animação, anúncio do nome completo do ganhador e compartilhamento dos dados necessários à entrega. Inscrições com a versão anterior não entram na lista de primeiros nomes da animação. Não há consentimento para marketing nem lista de divulgação.
 
 **Antes de publicar, a organização precisa confirmar:** identificação correta do responsável, contato público, eventual CNPJ, condições de envio e prazo de guarda. A política propõe **até 90 dias após a conferência**, até **1º de janeiro de 2027**, com exceções legais fundamentadas. A limpeza é uma tarefa operacional; o aplicativo não elimina automaticamente o banco ou seus backups.
 
@@ -279,6 +293,7 @@ Os testes verificam cadastro no celular, consentimentos, login, proteção das A
 | `shared/raffle.ts` | Livros e versão do consentimento. |
 | `app/pages/admin/` | Login, painel e tela de apresentação. |
 | `app/components/DrawStage.vue` | Animação e recuperação de resultados. |
+| `app/components/NameReel.vue` | Roleta de primeiros nomes em 3D, com desaceleração. |
 | `app/pages/ensaio.vue` | Ensaio com dados fictícios. |
 | `app/pages/regulamento.vue`, `app/pages/privacidade.vue` | Regras e tratamento de dados. Atualize a versão quando mudar o consentimento. |
 | `server/api/`, `server/utils/` | Validação, autenticação, rate limit, banco e APIs. |

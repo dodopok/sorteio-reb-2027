@@ -4,6 +4,36 @@ CREATE TABLE IF NOT EXISTS reb_event (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 INSERT INTO reb_event (id) VALUES (1) ON CONFLICT DO NOTHING;
+ALTER TABLE reb_event ADD COLUMN IF NOT EXISTS generation integer NOT NULL DEFAULT 1 CHECK (generation > 0);
+
+-- Every mutation checks the generation under the same lock as registration,
+-- closing and drawing. An old tab cannot modify a raffle after a reset.
+CREATE OR REPLACE FUNCTION reb_assert_generation(p_generation integer, p_exclusive boolean)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF p_exclusive THEN PERFORM pg_advisory_xact_lock(20261003, 1);
+  ELSE PERFORM pg_advisory_xact_lock_shared(20261003, 1); END IF;
+  IF (SELECT generation FROM reb_event WHERE id = 1) <> p_generation THEN
+    RAISE EXCEPTION 'Raffle reset' USING ERRCODE = 'RE009';
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION reb_reset(p_generation integer, p_total bigint, p_winners integer)
+RETURNS integer LANGUAGE plpgsql AS $$
+DECLARE next_generation integer;
+BEGIN
+  PERFORM reb_assert_generation(p_generation, true);
+  IF (SELECT count(*) FROM reb_participants) <> p_total OR (SELECT count(*) FROM reb_draws) <> p_winners THEN
+    RAISE EXCEPTION 'Data changed' USING ERRCODE = 'RE010';
+  END IF;
+  DELETE FROM reb_draws;
+  DELETE FROM reb_participants;
+  UPDATE reb_event SET status = 'draft', generation = generation + 1, updated_at = now()
+    WHERE id = 1 RETURNING generation INTO next_generation;
+  RETURN next_generation;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION reb_email_key(value text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT AS $$
@@ -140,6 +170,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION reb_dashboard() RETURNS jsonb LANGUAGE sql STABLE AS $$
   SELECT jsonb_build_object(
+    'generation', (SELECT generation FROM reb_event WHERE id = 1),
     'status', (SELECT status FROM reb_event WHERE id = 1),
     'total', (SELECT count(*) FROM reb_participants),
     'eligible', (SELECT count(*) FROM reb_participants p WHERE NOT EXISTS (SELECT 1 FROM reb_draws d WHERE d.participant_id = p.id)),
@@ -155,3 +186,4 @@ $$;
 REVOKE ALL ON reb_event, reb_participants, reb_draws, reb_sessions, reb_limits FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION reb_register(text,text,text,text), reb_draw(uuid,integer,bytea), reb_set_status(text),
   reb_dashboard(), reb_winner(uuid), reb_rate_limit(text,integer,integer) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION reb_assert_generation(integer,boolean), reb_reset(integer,bigint,integer) FROM PUBLIC;

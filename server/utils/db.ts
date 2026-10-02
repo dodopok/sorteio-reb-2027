@@ -19,6 +19,8 @@ export function databaseError(error: unknown): never {
     RE006: [409, 'São necessários pelo menos três participantes para encerrar.'],
     RE007: [409, 'Este livro já foi sorteado em outra tela. Atualize para recuperar o resultado.'],
     RE008: [503, 'Tente novamente para concluir o sorteio.'],
+    RE009: [409, 'Este sorteio foi reiniciado. Atualize a página para continuar.'],
+    RE010: [409, 'Os dados mudaram desde a confirmação. Atualize o painel e tente novamente.'],
   }
   if (code && messages[code]) {
     const [statusCode, statusMessage] = messages[code]

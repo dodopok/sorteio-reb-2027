@@ -1,7 +1,8 @@
 <script setup lang="ts">
 const props = withDefaults(defineProps<{ compact?: boolean; light?: boolean }>(), { compact: false, light: false })
-// Display the supplied official PNGs through a viewport. The original artwork,
-// including its lettering, is preserved; only transparent canvas padding is hidden.
+const maskId = `reb-mark-${useId()}`
+// Keep the supplied artwork intact. The white variant uses a luminance mask
+// to remove the black rectangle, including inside isolated animation layers.
 const artwork = computed(() => {
   if (props.light) return {
     src: '/images/brand/reb-logo-variants.png',
@@ -17,7 +18,11 @@ const artwork = computed(() => {
 <template>
   <div class="brand" :class="{ 'brand-light': light, 'brand-compact': compact }" role="img" aria-label="Rede Episcopal Brasileira">
     <svg :class="compact ? 'brand-icon' : 'brand-logo'" :viewBox="artwork.viewBox" aria-hidden="true">
-      <image :href="artwork.src" width="1280" height="904" />
+      <template v-if="light">
+        <defs><mask :id="maskId" maskUnits="userSpaceOnUse" x="0" y="0" width="1280" height="904" style="mask-type: luminance"><image :href="artwork.src" width="1280" height="904" /></mask></defs>
+        <rect width="1280" height="904" fill="white" :mask="`url(#${maskId})`" />
+      </template>
+      <image v-else :href="artwork.src" width="1280" height="904" />
     </svg>
   </div>
 </template>

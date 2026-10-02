@@ -1,10 +1,11 @@
 import { CONSENT_VERSION } from '#shared/raffle'
 import { registrationSchema } from '../utils/validation'
+import { z } from 'zod'
 
 export default defineEventHandler(async event => {
   assertOrigin(event)
   await rateLimit(event, 'register', 15, 600)
-  const parsed = registrationSchema.safeParse(await limitedBody(event))
+  const parsed = registrationSchema.extend({ generation: z.number().int().positive() }).safeParse(await limitedBody(event))
   if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Confira nome, e-mail, WhatsApp e os consentimentos.' })
   const input = parsed.data
   const config = useRuntimeConfig()
@@ -24,8 +25,8 @@ export default defineEventHandler(async event => {
     }
   }
   try {
-    await db()`SELECT reb_register(${input.name}, ${input.email}, ${input.whatsapp}, ${CONSENT_VERSION})`
+    await db()`SELECT reb_register(${input.name}, ${input.email}, ${input.whatsapp}, ${CONSENT_VERSION}) FROM reb_assert_generation(${input.generation}, false)`
   } catch (error) { databaseError(error) }
   // Equal response for a fresh registration and duplicates: no contact enumeration.
-  return { received: true }
+  return { received: true, generation: input.generation }
 })

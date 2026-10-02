@@ -23,10 +23,15 @@ const fieldErrors = reactive<Record<string, string>>({})
 const formSection = ref<HTMLElement>()
 const isOpen = computed(() => event.value?.available && event.value.status === 'open')
 let polling: ReturnType<typeof setInterval>
+function restoreReceipt() {
+  try { received.value = !!event.value?.available && localStorage.getItem('reb-2026-received') === String(event.value.generation) }
+  catch { received.value = false }
+}
+watch(() => event.value?.generation, () => { if (ready.value) restoreReceipt() })
 
 onMounted(() => {
   ready.value = true
-  try { received.value = localStorage.getItem('reb-2026-received') === 'true' } catch { /* Private browsing may disable local storage. */ }
+  restoreReceipt()
   polling = setInterval(() => { if (document.visibilityState === 'visible') refresh() }, 30000)
 })
 onBeforeUnmount(() => clearInterval(polling))
@@ -60,9 +65,9 @@ async function submit() {
   if (config.public.turnstileSiteKey && !token.value) { error.value = 'Aguarde a verificação de segurança e tente novamente.'; return }
   sending.value = true
   try {
-    await $fetch('/api/register', { method: 'POST', body: { ...form, turnstileToken: token.value } })
+    const result = await $fetch('/api/register', { method: 'POST', body: { ...form, turnstileToken: token.value, generation: event.value?.generation } })
     received.value = true
-    try { localStorage.setItem('reb-2026-received', 'true') } catch { /* Registration remains saved on the server. */ }
+    try { localStorage.setItem('reb-2026-received', String(result.generation)) } catch { /* Registration remains saved on the server. */ }
     await nextTick()
     formSection.value?.querySelector<HTMLElement>('.success-heading')?.focus()
   } catch (e: unknown) {
@@ -129,7 +134,7 @@ async function submit() {
               <div class="honeypot" aria-hidden="true"><label for="website">Seu site</label><input id="website" v-model="form.website" name="website" tabindex="-1" autocomplete="off"></div>
               <div class="consent-group">
                 <label class="check-label"><input v-model="form.adult" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Tenho 18 anos ou mais, moro no Brasil e aceito o <NuxtLink to="/regulamento" target="_blank">regulamento</NuxtLink>.</span></label>
-                <label class="check-label"><input v-model="form.consent" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Autorizo a REB a usar meus dados para este sorteio, divulgar meu nome se ganhar e compartilhar meus dados com a Thomas Nelson para o envio, conforme a <NuxtLink to="/privacidade" target="_blank">política de privacidade</NuxtLink>.</span></label>
+                <label class="check-label"><input v-model="form.consent" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Autorizo o uso dos meus dados neste sorteio, a exibição do meu primeiro nome na animação e, se ganhar, o anúncio do nome completo e o envio dos dados necessários à Thomas Nelson, conforme a <NuxtLink to="/privacidade" target="_blank">política de privacidade</NuxtLink>.</span></label>
                 <p v-if="fieldErrors.consent" id="consent-error" class="field-error">{{ fieldErrors.consent }}</p>
               </div>
               <TurnstileWidget ref="verification" @verified="token = $event" />
