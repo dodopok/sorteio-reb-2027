@@ -56,13 +56,17 @@ CREATE TABLE IF NOT EXISTS reb_participants (
 CREATE TABLE IF NOT EXISTS reb_draws (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id uuid NOT NULL UNIQUE,
-  prize_id smallint NOT NULL UNIQUE CHECK (prize_id BETWEEN 1 AND 3),
+  prize_id smallint NOT NULL UNIQUE CHECK (prize_id BETWEEN 1 AND 4),
   participant_id uuid NOT NULL UNIQUE REFERENCES reb_participants(id),
   drawn_at timestamptz NOT NULL DEFAULT now(),
   eligible_count integer NOT NULL CHECK (eligible_count > 0),
   pool_hash text NOT NULL,
   algorithm text NOT NULL DEFAULT 'node-crypto-uint32-rejection-v1'
 );
+
+-- Widen the existing three-prize constraint without changing saved draws.
+ALTER TABLE reb_draws DROP CONSTRAINT IF EXISTS reb_draws_prize_id_check;
+ALTER TABLE reb_draws ADD CONSTRAINT reb_draws_prize_id_check CHECK (prize_id BETWEEN 1 AND 4);
 
 CREATE TABLE IF NOT EXISTS reb_sessions (
   token_hash text PRIMARY KEY,
@@ -111,8 +115,8 @@ BEGIN
   IF p_status = 'open' AND EXISTS (SELECT 1 FROM reb_draws) THEN
     RAISE EXCEPTION 'Drawing started' USING ERRCODE = 'RE005';
   END IF;
-  IF p_status = 'closed' AND (SELECT count(*) FROM reb_participants) < 3 THEN
-    RAISE EXCEPTION 'Need three participants' USING ERRCODE = 'RE006';
+  IF p_status = 'closed' AND (SELECT count(*) FROM reb_participants) < 4 THEN
+    RAISE EXCEPTION 'Need four participants' USING ERRCODE = 'RE006';
   END IF;
   UPDATE reb_event SET status = p_status, updated_at = now() WHERE id = 1;
 END;
@@ -144,7 +148,7 @@ BEGIN
     RAISE EXCEPTION 'Close first' USING ERRCODE = 'RE002';
   END IF;
   SELECT count(*) + 1 INTO next_prize FROM reb_draws;
-  IF next_prize > 3 THEN RAISE EXCEPTION 'All drawn' USING ERRCODE = 'RE003'; END IF;
+  IF next_prize > 4 THEN RAISE EXCEPTION 'All drawn' USING ERRCODE = 'RE003'; END IF;
   IF next_prize <> p_expected_prize THEN RAISE EXCEPTION 'Prize already drawn' USING ERRCODE = 'RE007'; END IF;
   SELECT array_agg(p.id ORDER BY p.id) INTO candidates FROM reb_participants p
     WHERE NOT EXISTS (SELECT 1 FROM reb_draws d WHERE d.participant_id = p.id);

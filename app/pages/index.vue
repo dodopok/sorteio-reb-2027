@@ -5,9 +5,9 @@ import { prizes } from '#shared/raffle'
 const config = useRuntimeConfig()
 useSeoMeta({
   title: 'Sorteio de livros · Conferência Teológica REB',
-  description: 'Participe do sorteio de três livros com apoio da Thomas Nelson Brasil, na 2ª Conferência Teológica da Rede Episcopal Brasileira. 3 de outubro de 2026.',
+  description: 'Três livros da Thomas Nelson Brasil e um Kit Anglicano da REB. Quatro ganhadores na 2ª Conferência Teológica, em 3 de outubro de 2026.',
   ogTitle: 'Sorteio de livros · 2ª Conferência Teológica REB',
-  ogDescription: 'Cadastre-se para o sorteio de três livros durante a conferência, com apoio da Thomas Nelson Brasil.',
+  ogDescription: 'Três livros e um Kit Anglicano. Inscreva-se para concorrer durante a conferência da REB.',
   ogImage: `${config.public.siteUrl}/images/premios.png`,
   ogType: 'website',
 })
@@ -92,16 +92,17 @@ async function submit() {
         <div class="hero-story">
           <div class="hero-copy">
             <h1 id="hero-title">Sorteio de<br><em>livros</em></h1>
-            <p class="hero-description">Durante a conferência, vamos sortear três livros com apoio da Thomas Nelson Brasil. Inscreva-se para participar.</p>
+            <p class="hero-description">Três livros da Thomas Nelson Brasil e um Kit Anglicano da REB. Inscreva-se e acompanhe os quatro sorteios na live.</p>
             <a class="mobile-register-link" href="#participar">{{ event?.status === 'closed' ? 'Ver a transmissão' : 'Quero participar' }} <ArrowRight :size="16" /></a>
           </div>
 
           <div class="hero-books" aria-label="Os três livros do sorteio">
-            <div v-for="(prize, i) in prizes" :key="prize.id" class="hero-book" :class="`hero-book-${i + 1}`">
+            <div v-for="(prize, i) in prizes.filter(p => p.kind === 'book')" :key="prize.id" class="hero-book" :class="`hero-book-${i + 1}`">
               <BookCover :cover="prize.cover" :title="prize.title" />
             </div>
           </div>
-          <div class="hero-support"><div><span class="support-label">APOIO</span><SponsorLogo /></div><div class="prize-count"><span>03</span><p>livros.<br><strong>três ganhadores.</strong></p></div></div>
+          <a class="hero-kit" href="#kit-anglicano"><KitMockup /><div><h2>Kit Anglicano</h2><p>Livro, caneca e um item surpresa.</p><span>Oferecido pela REB <ArrowRight :size="14" /></span></div></a>
+          <div class="hero-support"><div><span class="support-label">APOIO</span><SponsorLogo /></div><div class="prize-count"><span>04</span><p>prêmios.<br><strong>quatro ganhadores.</strong></p></div></div>
         </div>
 
         <div id="participar" ref="formSection" class="registration-card">
@@ -119,7 +120,7 @@ async function submit() {
             <div class="closed-content">
               <p class="form-status"><span class="status-dot" />Inscrições encerradas</p>
               <h2>O cadastro<br><em>foi encerrado.</em></h2>
-              <p class="form-intro">Acompanhe os três sorteios na transmissão da conferência.</p>
+              <p class="form-intro">Acompanhe os quatro sorteios na transmissão da conferência.</p>
               <a class="button button-primary" href="https://www.youtube.com/@redeepiscopalbrasileira" target="_blank" rel="noopener noreferrer">Ver a live <ArrowUpRight :size="18" /></a>
             </div>
           </template>
@@ -134,7 +135,7 @@ async function submit() {
               <div class="honeypot" aria-hidden="true"><label for="website">Seu site</label><input id="website" v-model="form.website" name="website" tabindex="-1" autocomplete="off"></div>
               <div class="consent-group">
                 <label class="check-label"><input v-model="form.adult" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Tenho 18 anos ou mais, moro no Brasil e aceito o <NuxtLink to="/regulamento" target="_blank">regulamento</NuxtLink>.</span></label>
-                <label class="check-label"><input v-model="form.consent" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Autorizo o uso dos meus dados neste sorteio, a exibição do meu primeiro nome na animação e, se ganhar, o anúncio do nome completo e o envio dos dados necessários à Thomas Nelson, conforme a <NuxtLink to="/privacidade" target="_blank">política de privacidade</NuxtLink>.</span></label>
+                <label class="check-label"><input v-model="form.consent" type="checkbox" required :aria-invalid="!!fieldErrors.consent" aria-describedby="consent-error"><span>Autorizo o uso dos meus dados neste sorteio, a exibição do primeiro nome na animação e o anúncio do nome completo se ganhar. Se ganhar um dos três livros, autorizo o envio dos dados necessários à Thomas Nelson para a entrega. A REB envia o kit, conforme a <NuxtLink to="/privacidade" target="_blank">política de privacidade</NuxtLink>.</span></label>
                 <p v-if="fieldErrors.consent" id="consent-error" class="field-error">{{ fieldErrors.consent }}</p>
               </div>
               <TurnstileWidget ref="verification" @verified="token = $event" />
@@ -147,13 +148,21 @@ async function submit() {
               <p class="form-footnote"><ShieldCheck :size="14" /> Seus dados são usados só para este sorteio.</p>
             </fieldset></form>
           </template>
-          <div class="card-bottom"><Gift :size="16" /><span>3 ganhadores · 1 livro para cada um</span></div>
+          <div class="card-bottom"><Gift :size="16" /><span>4 ganhadores · um prêmio por pessoa</span></div>
         </div>
       </section>
 
       <section class="prizes-section" aria-labelledby="prizes-title">
-        <div class="page-width"><div class="section-heading"><div><p class="eyebrow">PRÊMIOS</p><h2 id="prizes-title">Os livros<br><em>do sorteio.</em></h2></div><p>Um exemplar de cada título.<br>Uma pessoa diferente em cada sorteio.</p></div>
-          <div class="prize-grid"><article v-for="prize in prizes" :key="prize.id" class="prize-card"><div class="prize-art"><BookCover :cover="prize.cover" :title="prize.title" /></div><div class="prize-info"><span class="prize-index">0{{ prize.id }}</span><p>{{ prize.author }}</p><h3>{{ prize.title }}</h3><span>{{ prize.short }}</span></div></article></div>
+        <div class="page-width"><div class="section-heading"><div><p class="eyebrow">PRÊMIOS</p><h2 id="prizes-title">Livros e<br><em>Kit Anglicano</em></h2></div><p>Três livros e um kit completo.<br>Uma pessoa diferente em cada sorteio.</p></div>
+          <div class="prize-grid">
+            <article v-for="prize in prizes" :id="prize.kind === 'kit' ? 'kit-anglicano' : undefined" :key="prize.id" class="prize-card" :class="{ 'prize-card-kit': prize.kind === 'kit' }">
+              <div class="prize-art"><PrizeVisual :cover="prize.cover" :title="prize.title" /></div>
+              <div class="prize-info"><span class="prize-index">0{{ prize.id }}</span><p>{{ prize.author }}</p><h3>{{ prize.title }}</h3>
+                <template v-if="prize.kind === 'kit'"><ul class="kit-contents"><li v-for="item in prize.contents" :key="item">{{ item }}</li></ul><p class="kit-disclaimer">O livro embrulhado representa o item surpresa.</p></template>
+                <span v-else>{{ prize.short }}</span>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 

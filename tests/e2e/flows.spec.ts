@@ -9,7 +9,7 @@ test.beforeAll(async () => {
   await sql`TRUNCATE reb_draws, reb_participants, reb_sessions, reb_limits`
   await sql`UPDATE reb_event SET status = 'open', generation = 1 WHERE id = 1`
   const names = ['Rafael Teste', 'Camila Teste', 'Lucas Teste', 'Ana Teste']
-  for (let i = 1; i <= 4; i++) await sql`SELECT reb_register(${names[i - 1]!}, ${`teste${i}@example.com`}, ${`+551198123000${i}`}, ${i === 4 ? '2026-10-03-v1' : '2026-10-03-v2'})`
+  for (let i = 1; i <= 4; i++) await sql`SELECT reb_register(${names[i - 1]!}, ${`teste${i}@example.com`}, ${`+551198123000${i}`}, ${i === 4 ? '2026-10-03-v1' : i === 1 ? '2026-10-03-v3' : '2026-10-03-v2'})`
   await sql.end()
 })
 
@@ -37,6 +37,7 @@ test('cadastro pelo celular, consentimento e confirmação sem duplicar chances'
 })
 
 test('protege as APIs, autentica, encerra e recupera sorteio após recarregar', async ({ page, request }) => {
+  test.setTimeout(60000)
   expect((await request.get('/api/admin/dashboard')).status()).toBe(401)
   expect((await request.post('/api/admin/state', { headers: { Origin: 'https://malicioso.example' }, data: { status: 'open' } })).status()).toBe(403)
   const large = await request.post('/api/register', { headers: { Origin: origin, 'Content-Type': 'application/json' }, data: JSON.stringify({ name: 'x'.repeat(10000) }) })
@@ -57,6 +58,7 @@ test('protege as APIs, autentica, encerra e recupera sorteio após recarregar', 
   expect(saved.animationNames.length).toBeGreaterThan(0)
   expect(saved.animationNames.every((name: string) => !name.includes(' '))).toBe(true)
   expect(saved.animationNames).not.toContain('Ana')
+  expect(saved.animationNames).toEqual(expect.arrayContaining(['Rafael', 'Camila', 'Lucas']))
   await expect(page.locator('.name-reel')).toBeVisible()
   await page.reload()
   await expect(page.locator('.stage-book-caption h2')).toHaveText('Toda a Escritura é…')
@@ -66,21 +68,41 @@ test('protege as APIs, autentica, encerra e recupera sorteio após recarregar', 
   expect(await page.locator('body').innerText()).not.toMatch(/@example\.com|\+5511/)
   await page.reload()
   await expect(page.locator('.winner-name')).toHaveText(winner)
-  await page.getByRole('button', { name: 'Próximo livro' }).click()
+  await page.getByRole('button', { name: 'Próximo prêmio' }).click()
   await expect(page.getByRole('heading', { name: 'Segundo sorteio', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sortear agora' }).click()
   await expect(page.getByText('ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
+  await page.getByRole('button', { name: 'Próximo prêmio' }).click()
+  await page.getByRole('button', { name: 'Sortear agora' }).click()
+  await expect(page.getByText('ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
+  await page.getByRole('button', { name: 'Próximo prêmio' }).click()
+  await expect(page.getByRole('heading', { name: 'Quarto sorteio', exact: true })).toBeVisible()
+  await expect(page.locator('.stage-book-caption h2')).toHaveText('Kit Anglicano')
+  await page.getByRole('button', { name: 'Sortear agora' }).click()
+  await expect(page.getByText('ESSE KIT É SEU!')).toBeVisible({ timeout: 10000 })
+  const complete = await (await page.request.get('/api/admin/dashboard')).json()
+  expect(complete.winners.map((w: { prizeId: number }) => w.prizeId)).toEqual([1, 2, 3, 4])
+  expect(new Set(complete.winners.map((w: { name: string }) => w.name)).size).toBe(4)
+  expect((await page.request.post('/api/admin/draw', { headers: { Origin: origin }, data: { requestId: crypto.randomUUID(), prizeId: 4, generation: 1 } })).status()).toBe(409)
+  expect((await page.request.post('/api/admin/draw', { headers: { Origin: origin }, data: { requestId: crypto.randomUUID(), prizeId: 5, generation: 1 } })).status()).toBe(400)
+  await page.reload()
+  await expect(page.locator('.stage-book-caption h2')).toHaveText('Kit Anglicano')
+  await expect(page.getByText('ESSE KIT É SEU!')).toBeVisible()
   await page.goto('/admin')
   await expect(page.getByText('maria@example.com')).not.toBeVisible()
   await page.getByRole('button', { name: 'Mostrar contatos' }).click()
-  await expect(page.locator('table tbody tr')).toHaveCount(2)
+  await expect(page.locator('table tbody tr')).toHaveCount(4)
+  await expect(page.locator('table tbody tr').last()).toContainText('Rede Episcopal Brasileira')
+  const exported = await (await page.request.get('/api/admin/export')).text()
+  expect(exported).toContain('Kit Anglicano')
+  expect(exported).toContain('Responsável pelo envio')
   await page.getByRole('button', { name: 'Sair', exact: true }).click()
   await expect(page).toHaveURL('/admin/login')
   expect((await page.request.get('/api/admin/dashboard')).status()).toBe(401)
 })
 
 test('reset exige autenticação e confirmação, apaga testes e invalida abas e recibos antigos', async ({ page, request }) => {
-  const body = { confirmation: 'APAGAR TESTES', generation: 1, total: 5, winners: 2 }
+  const body = { confirmation: 'APAGAR TESTES', generation: 1, total: 5, winners: 4 }
   expect((await request.post('/api/admin/reset', { headers: { Origin: origin }, data: body })).status()).toBe(401)
   expect((await request.post('/api/admin/reset', { headers: { Origin: 'https://malicioso.example' }, data: body })).status()).toBe(403)
   await page.goto('/admin/login')
@@ -107,8 +129,8 @@ test('reset exige autenticação e confirmação, apaga testes e invalida abas e
   expect((await page.request.post('/api/register', { headers: { Origin: origin }, data: { name: 'Maria de Fátima', email: 'maria@example.com', whatsapp: '(11) 98765-4321', adult: true, consent: true, generation: 1 } })).status()).toBe(409)
   expect((await page.request.post('/api/register', { headers: { Origin: origin }, data: { name: 'Maria de Fátima', email: 'maria@example.com', whatsapp: '(11) 98765-4321', adult: true, consent: true, generation: 2 } })).status()).toBe(200)
   expect((await (await page.request.get('/api/admin/dashboard')).json()).total).toBe(1)
-  for (let i = 1; i <= 2; i++) {
-    expect((await page.request.post('/api/register', { headers: { Origin: origin }, data: { name: `Pessoa Oficial ${i === 1 ? 'Um' : 'Dois'}`, email: `oficial${i}@example.com`, whatsapp: `1198765432${i + 1}`, adult: true, consent: true, generation: 2 } })).status()).toBe(200)
+  for (let i = 1; i <= 3; i++) {
+    expect((await page.request.post('/api/register', { headers: { Origin: origin }, data: { name: `Pessoa Oficial ${['Um', 'Dois', 'Três'][i - 1]}`, email: `oficial${i}@example.com`, whatsapp: `1198765432${i + 1}`, adult: true, consent: true, generation: 2 } })).status()).toBe(200)
   }
   expect((await page.request.post('/api/admin/state', { headers: { Origin: origin }, data: { status: 'closed', generation: 2 } })).status()).toBe(200)
   await page.evaluate(() => sessionStorage.setItem('reb-pending-draw-2026', JSON.stringify({ requestId: crypto.randomUUID(), prizeId: 1, generation: 1 })))
@@ -118,11 +140,11 @@ test('reset exige autenticação e confirmação, apaga testes e invalida abas e
 })
 
 test('ensaio completo sem acessar dados reais e QR Code apontando para o domínio correto', async ({ page }) => {
-  test.setTimeout(45000)
+  test.setTimeout(60000)
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/ensaio')
   await expect(page.getByText('ENSAIO · DADOS FICTÍCIOS')).toBeVisible()
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     await page.getByRole('button', { name: 'Ensaiar sorteio' }).click()
     if (i === 0) {
       await expect(page.locator('.name-reel')).toBeVisible()
@@ -131,8 +153,8 @@ test('ensaio completo sem acessar dados reais e QR Code apontando para o domíni
       expect(await page.locator('.reel-name').allTextContents()).toEqual(names)
       await expect(page.locator('.reel-winner')).toHaveText('Mariana')
     }
-    await expect(page.getByText('ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
-    if (i < 2) await page.getByRole('button', { name: 'Próximo livro' }).click()
+    await expect(page.getByText(i === 3 ? 'ESSE KIT É SEU!' : 'ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
+    if (i < 3) await page.getByRole('button', { name: 'Próximo prêmio' }).click()
   }
   await expect(page.getByRole('button', { name: 'Repetir ensaio' })).toBeVisible()
   await page.goto('/gc')

@@ -15,14 +15,14 @@ const fullscreen = ref(false)
 const reducedMotion = ref(false)
 let polling: ReturnType<typeof setInterval>
 let alive = true
-const nextPrize = computed(() => prizes[Math.min(data.value?.winners.length ?? 0, 2)]!)
-const roundTitle = computed(() => ['Primeiro sorteio', 'Segundo sorteio', 'Terceiro sorteio'][nextPrize.value.id - 1]!)
+const nextPrize = computed(() => prizes[Math.min(data.value?.winners.length ?? 0, prizes.length - 1)]!)
+const roundTitle = computed(() => ['Primeiro sorteio', 'Segundo sorteio', 'Terceiro sorteio', 'Quarto sorteio'][nextPrize.value.id - 1]!)
 const activePrize = computed(() => {
   const prizeId = state.value === 'revealed' ? revealed.value?.prizeId : state.value === 'drawing' ? drawingPrizeId.value : undefined
   return prizeId ? prizes[prizeId - 1]! : nextPrize.value
 })
-const finished = computed(() => (data.value?.winners.length ?? 0) >= 3)
-const demoNames = ['Mariana Oliveira', 'João Pedro Santos', 'Ana Beatriz Costa']
+const finished = computed(() => (data.value?.winners.length ?? 0) >= prizes.length)
+const demoNames = ['Mariana Oliveira', 'João Pedro Santos', 'Ana Beatriz Costa', 'Lucas Almeida']
 const demoFirstNames = ['Mariana', 'João', 'Ana', 'Lucas', 'Beatriz', 'Rafael', 'Camila', 'Pedro', 'Juliana', 'Gabriel', 'Fernanda', 'Mateus']
 const particles = Array.from({ length: 36 }, (_, i) => ({ left: `${(i * 47) % 100}%`, delay: `${(i % 7) * .12}s`, duration: `${2.5 + (i % 5) * .3}s`, rotation: `${i * 33}deg` }))
 const pendingKey = 'reb-pending-draw-2026'
@@ -134,17 +134,17 @@ onBeforeUnmount(() => { alive = false; clearInterval(polling); document.removeEv
     <div class="stage-ambient" aria-hidden="true"><span /><span /><span /></div>
     <header class="stage-header"><BrandMark light /><div class="stage-event"><span>2ª CONFERÊNCIA</span><em>Teológica</em></div><div class="stage-tag"><span class="live-dot" />{{ demo ? 'ENSAIO · DADOS FICTÍCIOS' : 'SORTEIO AO VIVO' }}</div></header>
     <div v-if="loading" class="stage-loading"><LoaderCircle :size="30" class="spin" />Carregando o sorteio…</div>
-    <template v-else-if="data"><section class="stage-main"><div class="stage-book"><div class="stage-book-halo" /><BookCover :key="activePrize.id" :cover="activePrize.cover" :title="activePrize.title" /><div class="stage-book-caption"><span>LIVRO 0{{ activePrize.id }}</span><h2>{{ activePrize.title }}</h2><p>{{ activePrize.author }}</p></div></div>
+    <template v-else-if="data"><section class="stage-main"><div class="stage-book"><div class="stage-book-halo" /><PrizeVisual :key="activePrize.id" :cover="activePrize.cover" :title="activePrize.title" /><div class="stage-book-caption"><span>PRÊMIO 0{{ activePrize.id }}</span><h2>{{ activePrize.title }}</h2><p>{{ activePrize.author }}</p></div></div>
         <div class="stage-message" aria-live="polite" aria-atomic="true">
           <template v-if="state === 'ready'"><h1 class="stage-ready-title">{{ finished ? 'Sorteio encerrado' : roundTitle }}</h1><p v-if="!finished" class="stage-ready-participants"><strong>{{ data.eligible }}</strong> {{ data.eligible === 1 ? 'participante' : 'participantes' }}</p></template>
           <template v-else-if="state === 'drawing'"><p class="eyebrow">SORTEANDO…</p><NameReel v-if="animation" :names="animation.names" :winner="animation.winner.name" @complete="finishAnimation" /><div v-else class="stage-draw-loading"><LoaderCircle :size="26" class="spin" /><p>Preparando o sorteio…</p></div></template>
-          <template v-else-if="revealed"><p class="eyebrow winner-eyebrow"><Sparkles :size="19" /> ESSE LIVRO É SEU!</p><h1 class="winner-name">{{ revealed.name }}</h1><p class="winner-congratulations">Parabéns!</p><div class="winner-book-label"><span>VOCÊ GANHOU</span><strong>{{ activePrize.title }}</strong></div><p class="winner-contact-note">A REB entrará em contato para combinar o envio.</p></template>
+          <template v-else-if="revealed"><p class="eyebrow winner-eyebrow"><Sparkles :size="19" /> {{ activePrize.kind === 'kit' ? 'ESSE KIT É SEU!' : 'ESSE LIVRO É SEU!' }}</p><h1 class="winner-name">{{ revealed.name }}</h1><p class="winner-congratulations">Parabéns!</p><div class="winner-book-label"><span>VOCÊ GANHOU</span><strong>{{ activePrize.title }}</strong></div><p class="winner-contact-note">A REB entrará em contato para combinar o envio.</p></template>
         </div>
       </section>
       <div v-if="state === 'revealed'" class="confetti" aria-hidden="true"><i v-for="(particle, i) in particles" :key="i" :style="{ left: particle.left, animationDelay: particle.delay, animationDuration: particle.duration, '--rotation': particle.rotation }" /></div>
       <div class="stage-results"><button v-for="prize in prizes" :key="prize.id" :disabled="state === 'drawing' || !data.winners.find(w => w.prizeId === prize.id)" @click="showWinner(data.winners.find(w => w.prizeId === prize.id)!)"><span class="result-number">0{{ prize.id }}</span><div><span class="result-prize">{{ prize.title }}</span><strong>{{ data.winners.find(w => w.prizeId === prize.id)?.name ?? 'Aguardando sorteio' }}</strong></div><span v-if="data.winners.find(w => w.prizeId === prize.id)" class="result-check">✓</span></button></div>
     </template>
     <p v-if="error" role="alert" class="stage-error">{{ error }} <button class="text-button" @click="load">Atualizar</button></p>
-    <footer class="stage-footer"><div class="stage-sponsor"><span>APOIO</span><SponsorLogo /></div><div class="stage-controls"><NuxtLink class="stage-back" :to="demo ? '/admin' : '/admin'"><ArrowLeft :size="16" /><span>Painel</span></NuxtLink><button class="stage-fullscreen" :aria-label="fullscreen ? 'Sair da tela cheia' : 'Tela cheia'" @click="toggleFullscreen"><Minimize v-if="fullscreen" :size="19" /><Maximize v-else :size="19" /></button><button v-if="data?.status !== 'closed'" class="button stage-draw-button" disabled>Encerre as inscrições no painel</button><button v-else-if="state === 'drawing'" class="button stage-draw-button" disabled><LoaderCircle :size="19" class="spin" /> Sorteando…</button><button v-else-if="state === 'revealed' && !finished" class="button stage-draw-button" @click="next">Próximo livro <ArrowRight :size="19" /></button><button v-else-if="!finished" class="button stage-draw-button" :disabled="!data || data.eligible < 1" @click="draw"><Sparkles :size="19" /> {{ demo ? 'Ensaiar sorteio' : 'Sortear agora' }}</button><button v-else-if="demo" class="button stage-draw-button" @click="replayDemo"><RotateCcw :size="18" /> Repetir ensaio</button><span v-else class="stage-complete">Sorteio encerrado.</span></div></footer>
+    <footer class="stage-footer"><div class="stage-sponsor"><span>APOIO</span><SponsorLogo /></div><div class="stage-controls"><NuxtLink class="stage-back" :to="demo ? '/admin' : '/admin'"><ArrowLeft :size="16" /><span>Painel</span></NuxtLink><button class="stage-fullscreen" :aria-label="fullscreen ? 'Sair da tela cheia' : 'Tela cheia'" @click="toggleFullscreen"><Minimize v-if="fullscreen" :size="19" /><Maximize v-else :size="19" /></button><button v-if="data?.status !== 'closed'" class="button stage-draw-button" disabled>Encerre as inscrições no painel</button><button v-else-if="state === 'drawing'" class="button stage-draw-button" disabled><LoaderCircle :size="19" class="spin" /> Sorteando…</button><button v-else-if="state === 'revealed' && !finished" class="button stage-draw-button" @click="next">Próximo prêmio <ArrowRight :size="19" /></button><button v-else-if="!finished" class="button stage-draw-button" :disabled="!data || data.eligible < 1" @click="draw"><Sparkles :size="19" /> {{ demo ? 'Ensaiar sorteio' : 'Sortear agora' }}</button><button v-else-if="demo" class="button stage-draw-button" @click="replayDemo"><RotateCcw :size="18" /> Repetir ensaio</button><span v-else class="stage-complete">Sorteio encerrado.</span></div></footer>
   </main>
 </template>

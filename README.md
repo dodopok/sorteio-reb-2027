@@ -28,17 +28,24 @@ O participante informa nome completo, WhatsApp com DDD e e-mail. Confirma que te
 
 O evento começa com as inscrições fechadas (`draft`). A organização abre e encerra pelo painel. Após o encerramento, cada rodada seleciona uma pessoa que ainda não ganhou:
 
-| Rodada | Livro | Autor |
+| Rodada | Prêmio | Conteúdo / autor |
 | --- | --- | --- |
 | 1 | Toda a Escritura é… | Michael F. Bird |
 | 2 | Religião estranha | Nijay Gupta |
 | 3 | Jesus e os poderes | N. T. Wright e Michael F. Bird |
+| 4 | Kit Anglicano | O Caminho Anglicano, de Thomas McKenzie; caneca “Seja anglicano gostoso demais”; um item surpresa |
 
-São **três ganhadores diferentes, um livro por pessoa**. A Thomas Nelson Brasil é responsável pelo envio. A inscrição não exige compra, pagamento, doação ou resposta imediata no chat.
+São **quatro ganhadores diferentes, um prêmio por pessoa**. A Thomas Nelson Brasil envia os três livros das primeiras rodadas. A **REB envia o Kit Anglicano**, completo, para o quarto ganhador. O livro embrulhado no mockup representa o item surpresa; a imagem não revela o que será enviado. A inscrição não exige compra, pagamento, doação ou resposta imediata no chat.
 
-O resultado é escolhido no servidor e salvo no PostgreSQL **antes da animação**. A contagem regressiva apenas apresenta a escolha. Cliques repetidos reutilizam o identificador da mesma operação, e duas telas não conseguem sortear o mesmo livro simultaneamente. Recarregar a página recupera o resultado salvo.
+O resultado é escolhido no servidor e salvo no PostgreSQL **antes da animação**. A roleta de primeiros nomes apenas apresenta a escolha: os nomes permanecem fixos nos cartões desde o início, ela para no primeiro nome do ganhador e então revela o nome completo. Cliques repetidos reutilizam o identificador da mesma operação, e duas telas não conseguem sortear o mesmo prêmio simultaneamente. Recarregar a página recupera o resultado salvo.
 
-Antes da primeira rodada é possível reabrir as inscrições. Depois que um livro é sorteado, o sistema impede a reabertura. O encerramento exige pelo menos três inscrições, para permitir os três prêmios. Não há botão para trocar um ganhador ou reiniciar o sorteio real.
+Antes da primeira rodada é possível reabrir as inscrições. Depois que um prêmio é sorteado, o sistema impede a reabertura. O encerramento exige pelo menos quatro inscrições, para permitir os quatro prêmios. Não há botão para trocar um ganhador. O reset com confirmação apaga todas as inscrições e resultados, e deve ser usado apenas para limpar testes antes do evento.
+
+### Atualização para quatro prêmios
+
+A migração executada no pré-deploy da Railway amplia o limite do banco para quatro rodadas e preserva inscrições, sessões e resultados existentes. **Não é preciso resetar o banco para adicionar o kit.** Se já houver três resultados salvos, o próximo sorteio será o kit; os três ganhadores anteriores não concorrem novamente. Em desenvolvimento local, execute `npm run db:migrate` antes de abrir a nova versão.
+
+Após o deployment, atualize as abas do painel, do palco e da página pública. Confira os quatro prêmios em `/admin` e ensaie as quatro rodadas em `/ensaio`. Para apagar dados fictícios antes da live, use o reset descrito abaixo; não use essa função para fazer a atualização do quarto prêmio.
 
 ## Variáveis de ambiente
 
@@ -135,10 +142,10 @@ O segundo comando exige banco acessível ao container e variáveis de produção
 
 ## Preparação para a live
 
-Faça a preparação hoje e use o ensaio para verificar a apresentação sem gastar as três rodadas reais:
+Faça a preparação hoje e use o ensaio para verificar a apresentação sem gastar as quatro rodadas reais:
 
 1. Entre em `/admin/login` com seu e-mail e a senha que gerou.
-2. Abra `/ensaio`, faça as três rodadas, teste tela cheia e veja se o nome aparece bem na captura. Os nomes dessa página são fictícios e não acessam o banco.
+2. Abra `/ensaio`, faça as quatro rodadas, teste tela cheia e veja se o nome aparece bem na captura. Os nomes dessa página são fictícios e não acessam o banco.
 3. Use navegador com zoom de 100% e teste a captura na resolução da live. Há uma versão responsiva para acompanhar pelo celular.
 4. Confira a roleta de primeiros nomes e a revelação do nome completo do ganhador. WhatsApp e e-mail não aparecem nessa tela. **Compartilhe somente `/admin/palco`**, não o painel nem o navegador inteiro.
 5. Teste o QR Code com outro celular. Os arquivos `public/live/qr-sorteio.svg` e `public/live/qr-sorteio.png` apontam para o domínio público definitivo.
@@ -167,9 +174,9 @@ O acesso do admin e as proteções de limite de tentativas continuam ativos. O r
 4. Quando decidir encerrar, clique em **Encerrar inscrições** e confirme. O servidor bloqueia novos cadastros imediatamente; os formulários já abertos atualizam o status em até 30 segundos e recebem uma mensagem de encerramento se tentarem enviar antes disso.
 5. Clique em **Abrir tela do sorteio**. Compartilhe essa aba na live e use **Tela cheia**.
 6. Clique em **Sortear agora**. A roleta passa por primeiros nomes, desacelera e revela o ganhador em aproximadamente sete segundos. A animação é apenas visual; o resultado já está salvo. Com a preferência de movimento reduzido do dispositivo, o resultado aparece diretamente.
-7. Clique em **Próximo livro** para preparar a rodada seguinte. Repita até concluir os três livros.
+7. Clique em **Próximo prêmio** para preparar a rodada seguinte. Repita até concluir as quatro rodadas.
 8. Encerre o compartilhamento de tela. Volte ao painel e clique em **Mostrar contatos**.
-9. Baixe o CSV dos **três ganhadores** e organize o contato e o envio com a Thomas Nelson. O endereço de entrega deve ser solicitado em contato privado.
+9. Baixe o CSV dos **quatro ganhadores**. Ele identifica o prêmio e o responsável pelo envio. Encaminhe à Thomas Nelson somente os contatos dos três ganhadores dos livros; a REB cuida do ganhador do kit. O endereço de entrega deve ser solicitado em contato privado.
 
 Se a conexão cair durante uma rodada, recarregue a mesma aba. A página recupera a operação e apresenta o resultado salvo; não escolhe outro nome. Se duas abas disputarem a mesma rodada, uma vence e a outra recebe a orientação de atualizar. Evite fazer os sorteios em vários aparelhos ao mesmo tempo.
 
@@ -191,7 +198,7 @@ Uma instância da aplicação e um PostgreSQL são suficientes como arquitetura 
 
 ## Privacidade, regras e fim do evento
 
-O aplicativo inclui `/regulamento` e `/privacidade`, com consentimento registrado na versão `2026-10-03-v2`, finalidades limitadas ao sorteio, exibição do primeiro nome na animação, anúncio do nome completo do ganhador e compartilhamento dos dados necessários à entrega. Inscrições com a versão anterior não entram na lista de primeiros nomes da animação. Não há consentimento para marketing nem lista de divulgação.
+O aplicativo inclui `/regulamento` e `/privacidade`, com consentimento registrado na versão `2026-10-03-v3`, finalidades limitadas ao sorteio, exibição do primeiro nome na animação, anúncio do nome completo do ganhador e compartilhamento dos dados necessários à entrega. A versão v3 acrescenta o kit e seu envio pela REB. Inscrições v2 continuam válidas e podem ter o primeiro nome na animação, pois já incluíam esse consentimento; inscrições v1 não entram nessa amostra visual. Não há consentimento para marketing nem lista de divulgação.
 
 **Antes de publicar, a organização precisa confirmar:** identificação correta do responsável, contato público, eventual CNPJ, condições de envio e prazo de guarda. A política propõe **até 90 dias após a conferência**, até **1º de janeiro de 2027**, com exceções legais fundamentadas. A limpeza é uma tarefa operacional; o aplicativo não elimina automaticamente o banco ou seus backups.
 
@@ -202,7 +209,7 @@ A participação numa conferência teológica pode permitir inferências sobre i
 Após a live:
 
 1. Mantenha as inscrições encerradas e faça contato privado com os ganhadores.
-2. Compartilhe com a editora apenas o necessário à entrega e registre a conclusão dos envios.
+2. Compartilhe com a editora apenas o necessário à entrega dos três livros. A REB faz o envio do kit sem encaminhar os dados desse ganhador à editora. Registre a conclusão das quatro entregas.
 3. Atenda solicitações de acesso, correção, revogação ou exclusão pelo e-mail público. Antes do sorteio, uma exclusão retira a pessoa da lista; após um resultado, não apague registros sem avaliar a necessidade de preservá-los para entrega e direitos dos envolvidos.
 4. Faça a limpeza das sessões e limites expirados com acesso administrativo ao banco correto:
 
@@ -277,10 +284,10 @@ Os testes verificam cadastro no celular, consentimentos, login, proteção das A
 | Turnstile não aparece ou não valida | Chaves do mesmo widget, domínio autorizado, URL pública correta e acesso do navegador à Cloudflare. |
 | Erro 429 / muitas tentativas | Aguarde o `Retry-After`. Cadastros feitos numa mesma rede compartilham o limite. Não remova toda a proteção para contornar um teste. |
 | Login falha | Confirme e-mail, hash completo, senha gerada e redeploy após alteração das variáveis. |
-| Não consegue encerrar | Há menos de três inscrições. |
+| Não consegue encerrar | Há menos de quatro inscrições. |
 | Não consegue reabrir | Já houve um sorteio real; esse bloqueio é intencional. |
 | Conexão caiu durante a animação | Recarregue a mesma aba para recuperar a operação gravada. |
-| Tela de ganhador estava aberta em dois aparelhos | Atualize a tela com erro. A rodada concorrente não gera um segundo ganhador para o mesmo livro. |
+| Tela de ganhador estava aberta em dois aparelhos | Atualize a tela com erro. A rodada concorrente não gera um segundo ganhador para o mesmo prêmio. |
 | Domínio novo não abre | Confira os registros exatos solicitados pela Railway, validação do domínio e certificado HTTPS. |
 | API não recebe requisições antes de o JavaScript carregar | Os campos ficam desabilitados até a página estar pronta. Em conexão lenta, aguarde; isso evita envio nativo acidental do formulário. |
 
@@ -290,7 +297,8 @@ Os testes verificam cadastro no celular, consentimentos, login, proteção das A
 | --- | --- |
 | `app/pages/index.vue` | Página pública e formulário. |
 | `app/assets/css/main.css` | Tipografia, cores, layout, responsividade e animações. |
-| `shared/raffle.ts` | Livros e versão do consentimento. |
+| `shared/raffle.ts` | Prêmios, responsáveis pelo envio e versão do consentimento. |
+| `app/components/KitMockup.vue`, `public/images/kit/` | Composição do kit, capa e arte originais, caneca e item surpresa gerados como imagens realistas. |
 | `app/pages/admin/` | Login, painel e tela de apresentação. |
 | `app/components/DrawStage.vue` | Animação e recuperação de resultados. |
 | `app/components/NameReel.vue` | Roleta de primeiros nomes em 3D, com desaceleração. |

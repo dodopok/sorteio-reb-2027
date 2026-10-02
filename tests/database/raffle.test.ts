@@ -14,7 +14,7 @@ suite('sorteio transacional em PostgreSQL real', () => {
   const register = (i: number, email = `pessoa${i}@example.com`, phone = `+55119${String(12340000 + i).padStart(8, '0')}`) => sql`SELECT reb_register('Pessoa Teste', ${email}, ${phone}, '2026-10-03-v1')`
   const draw = (id: string, prizeId: number) => sql`SELECT reb_draw(${id}, ${prizeId}, ${randomBytes(128)}) AS winner`
 
-  it('registra 500 pessoas simultaneamente, sem perder dados, e faz três sorteios sem repetição', async () => {
+  it('registra 500 pessoas simultaneamente, sem perder dados, e faz quatro sorteios sem repetição', async () => {
     const started = performance.now()
     await Promise.all(Array.from({ length: 500 }, (_, i) => register(i)))
     const rows = await sql`SELECT count(*)::integer AS n FROM reb_participants`
@@ -22,13 +22,13 @@ suite('sorteio transacional em PostgreSQL real', () => {
     console.log(`500 inscrições concorrentes: ${Math.round(performance.now() - started)} ms (banco local)`)
     await sql`SELECT reb_set_status('closed')`
     const winners = []
-    for (let i = 1; i <= 3; i++) winners.push((await draw(randomUUID(), i))[0]!.winner)
-    expect(new Set(winners.map(w => w.id)).size).toBe(3)
-    expect(winners.map(w => w.eligibleCount)).toEqual([500, 499, 498])
+    for (let i = 1; i <= 4; i++) winners.push((await draw(randomUUID(), i))[0]!.winner)
+    expect(new Set(winners.map(w => w.id)).size).toBe(4)
+    expect(winners.map(w => w.eligibleCount)).toEqual([500, 499, 498, 497])
     expect(winners.every(w => w.poolHash.length === 64)).toBe(true)
     const unique = await sql`SELECT count(DISTINCT participant_id)::integer AS n FROM reb_draws`
-    expect(unique[0]!.n).toBe(3)
-    await expect(draw(randomUUID(), 3)).rejects.toMatchObject({ code: 'RE003' })
+    expect(unique[0]!.n).toBe(4)
+    await expect(draw(randomUUID(), 4)).rejects.toMatchObject({ code: 'RE003' })
     await expect(sql`SELECT reb_set_status('open')`).rejects.toMatchObject({ code: 'RE005' })
   })
   it('bloqueia duplicidades concorrentes de email ou WhatsApp e aliases do Gmail', async () => {
@@ -39,7 +39,7 @@ suite('sorteio transacional em PostgreSQL real', () => {
     expect((await sql`SELECT count(*)::integer AS n FROM reb_participants`)[0]!.n).toBe(1)
   })
   it('torna os cliques repetidos idempotentes e bloqueia duas telas sorteando o mesmo livro', async () => {
-    await Promise.all([register(1), register(2), register(3)])
+    await Promise.all([register(1), register(2), register(3), register(4)])
     await sql`SELECT reb_set_status('closed')`
     const id = randomUUID()
     const repeated = await Promise.all(Array.from({ length: 20 }, () => draw(id, 1)))
@@ -53,8 +53,29 @@ suite('sorteio transacional em PostgreSQL real', () => {
     await expect(draw(randomUUID(), 1)).rejects.toMatchObject({ code: 'RE002' })
     await expect(sql`SELECT reb_set_status('closed')`).rejects.toMatchObject({ code: 'RE006' })
     await Promise.all([register(1), register(2), register(3)])
+    await expect(sql`SELECT reb_set_status('closed')`).rejects.toMatchObject({ code: 'RE006' })
+    await register(4)
     await sql`SELECT reb_set_status('closed')`
-    await expect(register(4)).rejects.toMatchObject({ code: 'RE001' })
+    await expect(register(5)).rejects.toMatchObject({ code: 'RE001' })
+  })
+  it('migra o banco de três prêmios sem apagar inscrições ou resultados e permite o kit', async () => {
+    await Promise.all([register(1), register(2), register(3), register(4)])
+    await sql`SELECT reb_set_status('closed')`
+    for (let i = 1; i <= 3; i++) await draw(randomUUID(), i)
+    const before = (await sql`SELECT reb_dashboard() AS data`)[0]!.data
+    await sql`ALTER TABLE reb_draws DROP CONSTRAINT reb_draws_prize_id_check`
+    await sql`ALTER TABLE reb_draws ADD CONSTRAINT reb_draws_prize_id_check CHECK (prize_id BETWEEN 1 AND 3)`
+    await sql.begin(async tx => { await tx.unsafe(await readFile(new URL('../../database/001_schema.sql', import.meta.url), 'utf8')) })
+    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toEqual(before)
+    const id = randomUUID()
+    const kit = (await draw(id, 4))[0]!.winner
+    expect(kit).toMatchObject({ prizeId: 4, eligibleCount: 1 })
+    expect((await draw(id, 4))[0]!.winner).toEqual(kit)
+    expect((await sql`SELECT count(DISTINCT participant_id)::integer AS n FROM reb_draws`)[0]!.n).toBe(4)
+    await expect(draw(randomUUID(), 4)).rejects.toMatchObject({ code: 'RE003' })
+    const complete = (await sql`SELECT reb_dashboard() AS data`)[0]!.data
+    await sql.begin(async tx => { await tx.unsafe(await readFile(new URL('../../database/001_schema.sql', import.meta.url), 'utf8')) })
+    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toEqual(complete)
   })
   it('mantém o limite de tentativas consistente em chamadas concorrentes', async () => {
     const result = await Promise.all(Array.from({ length: 50 }, () => sql`SELECT * FROM reb_rate_limit('teste', 5, 60)`))
@@ -62,7 +83,7 @@ suite('sorteio transacional em PostgreSQL real', () => {
     expect(result.every(r => r[0]!.retry_after > 0)).toBe(true)
   })
   it('retorna ao palco somente os nomes consentidos e preserva os contatos para o admin', async () => {
-    await Promise.all([register(1), register(2), register(3)])
+    await Promise.all([register(1), register(2), register(3), register(4)])
     await sql`SELECT reb_set_status('closed')`
     await draw(randomUUID(), 1)
     const stage = (await sql`SELECT reb_dashboard() - 'contacts' AS data`)[0]!.data
@@ -72,12 +93,12 @@ suite('sorteio transacional em PostgreSQL real', () => {
     expect(stage.winners[0].name).toBe('Pessoa Teste')
   })
   it('apaga todos os testes de forma atômica, fecha inscrições e mantém a sessão e os limites', async () => {
-    await Promise.all([register(1), register(2), register(3)])
+    await Promise.all([register(1), register(2), register(3), register(4)])
     await sql`SELECT reb_set_status('closed')`
     await draw(randomUUID(), 1)
     await sql`INSERT INTO reb_sessions VALUES ('sessao-teste', now() + interval '1 hour')`
     await sql`SELECT * FROM reb_rate_limit('limite-teste', 5, 60)`
-    const resets = await Promise.allSettled(Array.from({ length: 5 }, () => sql`SELECT reb_reset(1, 3, 1) AS generation`))
+    const resets = await Promise.allSettled(Array.from({ length: 5 }, () => sql`SELECT reb_reset(1, 4, 1) AS generation`))
     expect(resets.filter(result => result.status === 'fulfilled')).toHaveLength(1)
     expect(resets.filter(result => result.status === 'rejected').every(result => result.reason.code === 'RE009')).toBe(true)
     const dashboard = (await sql`SELECT reb_dashboard() AS data`)[0]!.data
@@ -89,17 +110,17 @@ suite('sorteio transacional em PostgreSQL real', () => {
     expect((await sql`SELECT count(*)::integer AS n FROM reb_participants`)[0]!.n).toBe(1)
   })
   it('recusa uma confirmação desatualizada sem apagar participantes ou resultados', async () => {
-    await Promise.all([register(1), register(2), register(3)])
+    await Promise.all([register(1), register(2), register(3), register(4)])
     await expect(sql`SELECT reb_reset(1, 2, 0)`).rejects.toMatchObject({ code: 'RE010' })
     await sql`SELECT reb_set_status('closed')`
     await draw(randomUUID(), 1)
-    await expect(sql`SELECT reb_reset(1, 3, 0)`).rejects.toMatchObject({ code: 'RE010' })
-    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toMatchObject({ generation: 1, total: 3 })
+    await expect(sql`SELECT reb_reset(1, 4, 0)`).rejects.toMatchObject({ code: 'RE010' })
+    expect((await sql`SELECT reb_dashboard() AS data`)[0]!.data).toMatchObject({ generation: 1, total: 4 })
     expect((await sql`SELECT count(*)::integer AS n FROM reb_draws`)[0]!.n).toBe(1)
   })
   it('bloqueia operações de abas antigas e resets repetidos depois de zerar', async () => {
-    await Promise.all([register(1), register(2), register(3)])
-    await sql`SELECT reb_reset(1, 3, 0)`
+    await Promise.all([register(1), register(2), register(3), register(4)])
+    await sql`SELECT reb_reset(1, 4, 0)`
     await expect(sql`SELECT reb_reset(1, 0, 0)`).rejects.toMatchObject({ code: 'RE009' })
     await expect(sql`SELECT reb_set_status('open') FROM reb_assert_generation(1, true)`).rejects.toMatchObject({ code: 'RE009' })
     await sql`SELECT reb_set_status('open') FROM reb_assert_generation(2, true)`
