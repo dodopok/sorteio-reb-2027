@@ -67,7 +67,7 @@ test('protege as APIs, autentica, encerra e recupera sorteio após recarregar', 
   await page.reload()
   await expect(page.locator('.winner-name')).toHaveText(winner)
   await page.getByRole('button', { name: 'Próximo livro' }).click()
-  await expect(page.getByText('SORTEIO 02 DE 03')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Segundo sorteio', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Sortear agora' }).click()
   await expect(page.getByText('ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
   await page.goto('/admin')
@@ -118,11 +118,19 @@ test('reset exige autenticação e confirmação, apaga testes e invalida abas e
 })
 
 test('ensaio completo sem acessar dados reais e QR Code apontando para o domínio correto', async ({ page }) => {
+  test.setTimeout(45000)
   await page.setViewportSize({ width: 1920, height: 1080 })
   await page.goto('/ensaio')
   await expect(page.getByText('ENSAIO · DADOS FICTÍCIOS')).toBeVisible()
   for (let i = 0; i < 3; i++) {
     await page.getByRole('button', { name: 'Ensaiar sorteio' }).click()
+    if (i === 0) {
+      await expect(page.locator('.name-reel')).toBeVisible()
+      const names = await page.locator('.reel-name').allTextContents()
+      await page.waitForTimeout(5800)
+      expect(await page.locator('.reel-name').allTextContents()).toEqual(names)
+      await expect(page.locator('.reel-winner')).toHaveText('Mariana')
+    }
     await expect(page.getByText('ESSE LIVRO É SEU!')).toBeVisible({ timeout: 10000 })
     if (i < 2) await page.getByRole('button', { name: 'Próximo livro' }).click()
   }

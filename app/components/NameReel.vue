@@ -4,11 +4,13 @@ const emit = defineEmits<{ complete: [] }>()
 const progress = ref(0)
 const angle = ref(0)
 const duration = 6400
+const winnerSlot = 8
+const finalAngle = 2160 + winnerSlot * 30
 const slots = computed(() => {
   const names = [...new Set(props.names.map(name => name.trim()).filter(Boolean))]
   return Array.from({ length: 12 }, (_, i) => ({
     angle: i * 30,
-    name: i === 0 && progress.value > .88 ? props.winner.trim().split(/\s+/)[0]! : names[names.length >= 12 ? Math.floor(i * names.length / 12) : i % names.length] || `Inscrição ${String(i + 1).padStart(2, '0')}`,
+    name: i === winnerSlot ? props.winner.trim().split(/\s+/)[0]! : names[names.length >= 12 ? Math.floor(i * names.length / 12) : i % names.length] || `Inscrição ${String(i + 1).padStart(2, '0')}`,
   }))
 })
 let frame = 0
@@ -17,11 +19,12 @@ onMounted(() => {
   const start = performance.now()
   function tick(now: number) {
     progress.value = Math.min((now - start) / duration, 1)
-    // Six full turns, with a gradual slowdown, land exactly on the saved winner.
+    // Each card keeps its name throughout. The fixed endpoint brings the saved
+    // winner's card to the center without changing any text near the stop.
     const eased = 1 - Math.pow(1 - progress.value, 3)
-    angle.value = -2160 * eased
+    angle.value = -finalAngle * eased
     if (progress.value < 1) frame = requestAnimationFrame(tick)
-    else hold = setTimeout(() => emit('complete'), 500)
+    else hold = setTimeout(() => emit('complete'), 800)
   }
   frame = requestAnimationFrame(tick)
 })
@@ -35,7 +38,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(frame); clearTimeout(hold) })
       <div class="reel-focus" />
       <div class="reel-scene">
         <div class="reel-cylinder" :style="{ transform: `rotateX(${angle}deg)` }">
-          <div v-for="(slot, i) in slots" :key="i" class="reel-name" :class="{ 'reel-winner': i === 0 && progress > .88 }" :style="{ transform: `rotateX(${slot.angle}deg) translateZ(164px)` }">{{ slot.name }}</div>
+          <div v-for="(slot, i) in slots" :key="i" class="reel-name" :class="{ 'reel-winner': i === winnerSlot && progress === 1 }" :style="{ transform: `rotateX(${slot.angle}deg) translateZ(164px)` }">{{ slot.name }}</div>
         </div>
       </div>
     </div>

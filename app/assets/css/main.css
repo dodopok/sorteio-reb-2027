@@ -163,3 +163,7 @@ fieldset{border:0;padding:0;margin:0;min-width:0}.mobile-register-link{display:n
   .stage-event em { font-size: 24px; }
   .stage-tag { max-width: 75px; font-size: 7px; }
 }
+
+.stage-message .stage-ready-title { font-size: clamp(42px, 4.3vw, 76px); font-weight: 500; letter-spacing: -.8px; line-height: 1.1; margin: 0; }
+.stage-ready-participants { font-size: 17px; color: var(--sand); margin-top: 18px; line-height: 1.6; }
+.stage-ready-participants strong { font-weight: 500; }

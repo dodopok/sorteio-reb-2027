@@ -16,6 +16,7 @@ const reducedMotion = ref(false)
 let polling: ReturnType<typeof setInterval>
 let alive = true
 const nextPrize = computed(() => prizes[Math.min(data.value?.winners.length ?? 0, 2)]!)
+const roundTitle = computed(() => ['Primeiro sorteio', 'Segundo sorteio', 'Terceiro sorteio'][nextPrize.value.id - 1]!)
 const activePrize = computed(() => {
   const prizeId = state.value === 'revealed' ? revealed.value?.prizeId : state.value === 'drawing' ? drawingPrizeId.value : undefined
   return prizeId ? prizes[prizeId - 1]! : nextPrize.value
@@ -135,7 +136,7 @@ onBeforeUnmount(() => { alive = false; clearInterval(polling); document.removeEv
     <div v-if="loading" class="stage-loading"><LoaderCircle :size="30" class="spin" />Carregando o sorteio…</div>
     <template v-else-if="data"><section class="stage-main"><div class="stage-book"><div class="stage-book-halo" /><BookCover :key="activePrize.id" :cover="activePrize.cover" :title="activePrize.title" /><div class="stage-book-caption"><span>LIVRO 0{{ activePrize.id }}</span><h2>{{ activePrize.title }}</h2><p>{{ activePrize.author }}</p></div></div>
         <div class="stage-message" aria-live="polite" aria-atomic="true">
-          <template v-if="state === 'ready'"><p class="eyebrow"><span class="gold-line" /> {{ finished ? 'SORTEIO ENCERRADO' : `SORTEIO 0${nextPrize.id} DE 03` }}</p><h1 v-if="!finished">Quem vai ganhar<br><em>este livro?</em></h1><h1 v-else>Os três livros<br><em>já foram sorteados.</em></h1><p class="stage-description">{{ finished ? 'Confira os ganhadores abaixo.' : '' }}</p><div class="stage-participants"><span>{{ data.eligible }}</span> {{ finished ? 'participantes ainda não contemplados' : 'pessoas concorrendo nesta rodada' }}</div></template>
+          <template v-if="state === 'ready'"><h1 class="stage-ready-title">{{ finished ? 'Sorteio encerrado' : roundTitle }}</h1><p v-if="!finished" class="stage-ready-participants"><strong>{{ data.eligible }}</strong> {{ data.eligible === 1 ? 'participante' : 'participantes' }}</p></template>
           <template v-else-if="state === 'drawing'"><p class="eyebrow">SORTEANDO…</p><NameReel v-if="animation" :names="animation.names" :winner="animation.winner.name" @complete="finishAnimation" /><div v-else class="stage-draw-loading"><LoaderCircle :size="26" class="spin" /><p>Preparando o sorteio…</p></div></template>
           <template v-else-if="revealed"><p class="eyebrow winner-eyebrow"><Sparkles :size="19" /> ESSE LIVRO É SEU!</p><h1 class="winner-name">{{ revealed.name }}</h1><p class="winner-congratulations">Parabéns!</p><div class="winner-book-label"><span>VOCÊ GANHOU</span><strong>{{ activePrize.title }}</strong></div><p class="winner-contact-note">A REB entrará em contato para combinar o envio.</p></template>
         </div>
