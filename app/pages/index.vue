@@ -90,7 +90,7 @@ async function submit() {
             <p class="eyebrow"><span /> 2ª CONFERÊNCIA TEOLÓGICA</p>
             <h1 id="hero-title">Sorteio de<br><em>livros.</em></h1>
             <p class="hero-description">Durante a conferência, vamos sortear três livros com apoio da Thomas Nelson Brasil. Inscreva-se para participar.</p>
-            <a class="mobile-register-link" href="#participar">Quero participar <ArrowRight :size="16" /></a>
+            <a class="mobile-register-link" href="#participar">{{ event?.status === 'closed' ? 'Ver a transmissão' : 'Quero participar' }} <ArrowRight :size="16" /></a>
           </div>
 
           <div class="hero-books" aria-label="Os três livros do sorteio">
@@ -110,11 +110,18 @@ async function submit() {
               <p>O resultado será anunciado na live. Se você ganhar, a REB entrará em contato.</p>
               <div class="success-note"><ShieldCheck :size="20" /><p>Uma inscrição por e-mail e WhatsApp.<br>Reenvios não criam novas chances.</p></div>
               <a class="button button-primary" href="https://www.youtube.com/@redeepiscopalbrasileira" target="_blank" rel="noopener noreferrer">Voltar para a live <ArrowUpRight :size="18" /></a>
-              <span class="tiny-text">Se você ganhar, entraremos em contato.</span>
+            </div>
+          </template>
+          <template v-else-if="event?.status === 'closed'">
+            <div class="closed-content">
+              <p class="form-status"><span class="status-dot" />Inscrições encerradas</p>
+              <h2>O cadastro<br><em>foi encerrado.</em></h2>
+              <p class="form-intro">Acompanhe os três sorteios na transmissão da conferência.</p>
+              <a class="button button-primary" href="https://www.youtube.com/@redeepiscopalbrasileira" target="_blank" rel="noopener noreferrer">Ver a live <ArrowUpRight :size="18" /></a>
             </div>
           </template>
           <template v-else>
-            <div class="form-status"><span :class="['status-dot', { active: isOpen }]" />{{ event?.status === 'closed' ? 'Inscrições encerradas' : isOpen ? 'Inscrições abertas' : 'Inscrições em breve' }}</div>
+            <div class="form-status"><span :class="['status-dot', { active: isOpen }]" />{{ isOpen ? 'Inscrições abertas' : 'Inscrições em breve' }}</div>
             <h2>Faça sua<br><em>inscrição.</em></h2>
             <p class="form-intro">A participação é gratuita. Informe seus contatos e acompanhe o resultado na live.</p>
             <form novalidate @submit.prevent="submit"><fieldset :disabled="!ready || sending">
@@ -132,7 +139,7 @@ async function submit() {
               <p v-if="!event?.available" class="availability-note">Estamos preparando as inscrições. Volte em instantes.</p>
               <button class="button button-primary register-button" type="submit" :disabled="!ready || sending || !isOpen">
                 <LoaderCircle v-if="sending" class="spin" :size="19" />
-                <template v-else>{{ isOpen ? 'Quero participar do sorteio' : event?.status === 'closed' ? 'Inscrições encerradas' : 'As inscrições abrem na live' }}<ArrowRight v-if="isOpen" :size="19" /></template>
+                <template v-else>{{ isOpen ? 'Quero participar do sorteio' : 'As inscrições abrem na live' }}<ArrowRight v-if="isOpen" :size="19" /></template>
               </button>
               <p class="form-footnote"><ShieldCheck :size="14" /> Seus dados são usados só para este sorteio.</p>
             </fieldset></form>

@@ -31,3 +31,68 @@ fieldset{border:0;padding:0;margin:0;min-width:0}.mobile-register-link{display:n
 
 .prize-card:nth-child(n) .prize-art{background:transparent}.prize-art:before,.prize-art:after{display:none}.field label{font-size:12px}.form-intro{font-size:12px}.check-label{font-size:10px;line-height:1.8}.field input::placeholder{font-size:12px}.form-footnote{font-size:9px}.hero-description{color:#e7d8c7}
 @media(max-width:740px){.field label{font-size:12px}.form-intro{font-size:12px}.check-label{font-size:11px}.form-footnote{font-size:9px}}
+
+/* Keep operational and consent text readable on phones and on the live screen. */
+:root { --muted: #6e626c; }
+.hero-description { font-size: 14px; max-width: 440px; }
+.hero-copy .eyebrow, .section-heading .eyebrow, .header-event { font-size: 11px; }
+.event-pill { font-size: 11px; letter-spacing: .6px; }
+.live-link, .mobile-register-link { font-size: 12px; }
+.support-label, .prize-count p { font-size: 11px; }
+.form-status, .field label, .field label span { font-size: 12px; }
+.form-intro, .login-card .form-intro { font-size: 14px; line-height: 1.8; }
+.field input, .login-card .field input { font-size: 16px; }
+.field input::placeholder { font-size: 14px; color: #776c77; }
+.check-label { font-size: 12px; line-height: 1.8; color: #635763; }
+.check-label input { width: 18px; height: 18px; min-width: 18px; }
+.field-error, .form-error, .availability-note { font-size: 13px; }
+.register-button, .button, .text-button { font-size: 14px; }
+.form-footnote, .card-bottom, .tiny-text { font-size: 11px; color: #6e606a; }
+.success-content > p:not(.eyebrow), .success-note p { font-size: 13px; }
+.section-heading > p { font-size: 14px; }
+.prize-info > p { font-size: 12px; }
+.prize-info > span { font-size: 13px; }
+.site-footer { font-size: 12px; color: #e0cfbd; }
+.legal-page section p, .legal-page li { font-size: 14px; }
+.legal-version, .back-link, .login-card .back-link { font-size: 12px; }
+.login-card .field label { font-size: 12px; }
+.admin-badge, .admin-heading .eyebrow { font-size: 11px; }
+.stat-card > span:not(.status-dot), .status-stat > small { font-size: 12px; color: #706271; }
+.admin-action-card p { font-size: 13px; color: #f0e1ce; }
+.admin-actions .button-primary, .admin-heading .button, .contacts-section .button { font-size: 13px; }
+.admin-tools, .admin-tools > .text-button, .admin-hint { font-size: 12px; }
+.admin-section-title > span, .contacts-section .admin-section-title p { font-size: 12px; }
+.admin-prizes .eyebrow { font-size: 11px; color: #775d4c; }
+.admin-prizes p, .admin-prizes .waiting-winner { font-size: 13px; color: #706271; }
+.contacts-table table, .contacts-table > a, .confirm-dialog p { font-size: 13px; }
+.stage-tag, .stage-message > .eyebrow, .stage-book-caption > span { font-size: 12px; }
+.stage-book-caption p, .stage-participants, .stage-drawing-copy, .winner-contact-note { font-size: 14px; }
+.result-prize, .stage-back span, .stage-sponsor > span, .stage-complete { font-size: 12px; }
+.stage-results strong, .stage-description, .stage-error { font-size: 14px; }
+.stage-results button:disabled strong { color: #c4b0a4; }
+.closed-content { padding: 0 0 32px; }
+.closed-content .button { width: 100%; }
+
+@media (max-width: 740px) {
+  .hero-copy h1 { font-size: clamp(68px, 23vw, 90px); }
+  .hero-description { max-width: 340px; }
+  .event-pill { font-size: 10px; gap: 6px; letter-spacing: .1px; }
+  .hero-copy .eyebrow { font-size: 10px; letter-spacing: 1px; }
+  .live-link { font-size: 10px; }
+  .hero-support { gap: 12px; }
+  .support-label, .prize-count p { font-size: 10px; }
+  .hero-support .sponsor-logo { width: 94px; }
+  .prize-card { gap: 18px; }
+  .prize-info > span { font-size: 12px; }
+  .prize-info > p { font-size: 11px; }
+  .stage-tag { font-size: 10px; letter-spacing: .3px; }
+  .stage-message > .eyebrow { font-size: 11px; letter-spacing: 1px; }
+  .stage-book-caption > span, .stage-sponsor > span { font-size: 10px; }
+  .stage-book-caption p, .stage-participants, .winner-contact-note { font-size: 12px; }
+}
+
+@media (min-width: 1600px) {
+  .stage-tag, .stage-book-caption > span, .result-prize { font-size: 14px; }
+  .stage-book-caption p, .stage-participants, .winner-contact-note { font-size: 16px; }
+  .stage-results strong, .stage-drawing-copy { font-size: 16px; }
+}

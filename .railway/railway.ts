@@ -16,7 +16,6 @@ export default defineRailway(() => {
     preDeploy: 'node scripts/migrate.mjs',
     healthcheck: '/api/health',
     healthcheckTimeout: 60,
-    domains: [{ domain: 'sorteio.redeepiscopalbrasileira.com.br', port: 3000 }],
     env: {
       NODE_ENV: 'production',
       HOST: '0.0.0.0',
