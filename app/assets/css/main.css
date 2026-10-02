@@ -96,3 +96,30 @@ fieldset{border:0;padding:0;margin:0;min-width:0}.mobile-register-link{display:n
   .stage-book-caption p, .stage-participants, .winner-contact-note { font-size: 16px; }
   .stage-results strong, .stage-drawing-copy { font-size: 16px; }
 }
+
+/* Official REB artwork; keep its proportions and lettering intact. */
+.brand-logo { width: 184px; height: 99px; }
+.brand-light { mix-blend-mode: screen; }
+.hero-copy, .hero-copy h1 { margin-top: 0; }
+.admin-header .brand-logo { width: 145px; height: 78px; }
+.stage-header .brand-logo { width: 162px; height: 87px; }
+.gc-full-header .brand-logo { width: 200px; height: 108px; }
+.prize-card { position: relative; }
+.prize-info > .prize-index { font-size: 30px; line-height: 1; color: #8b7257; }
+
+@media (max-width: 740px) {
+  .site-header .brand-logo { width: 140px; height: 75px; }
+  .admin-header .brand-logo { width: 130px; height: 70px; }
+  .stage-header .brand-logo { width: 85px; height: 46px; }
+  .prize-info > .prize-index {
+    position: static;
+    display: block;
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .site-header .brand-logo { width: 130px; height: 70px; }
+  .stage-header .brand-logo { width: 64px; height: 35px; }
+}

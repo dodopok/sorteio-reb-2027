@@ -85,10 +85,8 @@ async function submit() {
     <main>
       <section class="hero page-width" aria-labelledby="hero-title">
         <div class="hero-story">
-          <div class="event-pill"><span class="live-dot" /><span>03 OUT · 8H ÀS 12H</span><span class="pill-divider" /> <span>AO VIVO NO YOUTUBE</span></div>
           <div class="hero-copy">
-            <p class="eyebrow"><span /> 2ª CONFERÊNCIA TEOLÓGICA</p>
-            <h1 id="hero-title">Sorteio de<br><em>livros.</em></h1>
+            <h1 id="hero-title">Sorteio de<br><em>livros</em></h1>
             <p class="hero-description">Durante a conferência, vamos sortear três livros com apoio da Thomas Nelson Brasil. Inscreva-se para participar.</p>
             <a class="mobile-register-link" href="#participar">{{ event?.status === 'closed' ? 'Ver a transmissão' : 'Quero participar' }} <ArrowRight :size="16" /></a>
           </div>
@@ -150,7 +148,7 @@ async function submit() {
 
       <section class="prizes-section" aria-labelledby="prizes-title">
         <div class="page-width"><div class="section-heading"><div><p class="eyebrow">PRÊMIOS</p><h2 id="prizes-title">Os livros<br><em>do sorteio.</em></h2></div><p>Um exemplar de cada título.<br>Uma pessoa diferente em cada sorteio.</p></div>
-          <div class="prize-grid"><article v-for="prize in prizes" :key="prize.id" class="prize-card"><div class="prize-art"><span class="prize-index">0{{ prize.id }}</span><BookCover :cover="prize.cover" :title="prize.title" /></div><div class="prize-info"><p>{{ prize.author }}</p><h3>{{ prize.title }}</h3><span>{{ prize.short }}</span></div></article></div>
+          <div class="prize-grid"><article v-for="prize in prizes" :key="prize.id" class="prize-card"><div class="prize-art"><BookCover :cover="prize.cover" :title="prize.title" /></div><div class="prize-info"><span class="prize-index">0{{ prize.id }}</span><p>{{ prize.author }}</p><h3>{{ prize.title }}</h3><span>{{ prize.short }}</span></div></article></div>
         </div>
       </section>
 
